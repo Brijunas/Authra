@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Authra.Api/Authra.Api.csproj" />
+    <Project Path="src/Authra.Application/Authra.Application.csproj" />
+    <Project Path="src/Authra.Domain/Authra.Domain.csproj" />
+    <Project Path="src/Authra.Infrastructure/Authra.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Authra.IntegrationTests/Authra.IntegrationTests.csproj" />
+    <Project Path="tests/Authra.UnitTests/Authra.UnitTests.csproj" />
+  </Folder>
+</Solution>

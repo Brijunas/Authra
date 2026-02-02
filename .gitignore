@@ -3,3 +3,64 @@
 CLAUDE-*.md
 session-name.txt
 CLAUDE.md
+
+# .NET
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.userprefs
+.vs/
+.vscode/
+*.csproj.user
+
+# Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+build/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# NuGet
+*.nupkg
+*.snupkg
+.nuget/
+packages/
+*.nuget.props
+*.nuget.targets
+
+# Test results
+[Tt]est[Rr]esult*/
+*.trx
+coverage*/
+*.coveragexml
+*.coverage
+
+# Rider
+.idea/
+*.sln.iml
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Secrets (never commit)
+*.pfx
+*.p12
+appsettings.*.local.json
+.env
+.env.*
+!.env.example

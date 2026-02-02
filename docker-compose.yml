@@ -1,0 +1,30 @@
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: authra-postgres
+    environment:
+      POSTGRES_USER: authra
+      POSTGRES_PASSWORD: authra_dev_password
+      POSTGRES_DB: authra
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U authra -d authra"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  mailpit:
+    image: axllent/mailpit
+    container_name: authra-mailpit
+    ports:
+      - "8025:8025"  # Web UI
+      - "1025:1025"  # SMTP
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+
+volumes:
+  postgres_data:
