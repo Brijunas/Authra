@@ -63,6 +63,7 @@ Desktop.ini
 # Secrets (never commit)
 *.pfx
 *.p12
+appsettings.Development.json
 appsettings.*.local.json
 .env
 .env.*
