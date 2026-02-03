@@ -9,6 +9,7 @@ public class TenantMember : TenantEntity
 {
     private readonly List<OrganizationMember> _organizationMemberships = [];
     private readonly List<Invite> _sentInvites = [];
+    private readonly List<TenantMemberRole> _roleAssignments = [];
 
     public Guid UserId { get; private set; }
     public User User { get; private set; } = null!;
@@ -20,6 +21,7 @@ public class TenantMember : TenantEntity
 
     public IReadOnlyCollection<OrganizationMember> OrganizationMemberships => _organizationMemberships.AsReadOnly();
     public IReadOnlyCollection<Invite> SentInvites => _sentInvites.AsReadOnly();
+    public IReadOnlyCollection<TenantMemberRole> RoleAssignments => _roleAssignments.AsReadOnly();
 
     private TenantMember()
     {
@@ -61,4 +63,17 @@ public class TenantMember : TenantEntity
     }
 
     public bool IsActive => Status == "active";
+
+    /// <summary>
+    /// Assigns a role to this tenant member.
+    /// </summary>
+    public TenantMemberRole AssignRole(Role role, Guid? assignedBy = null)
+    {
+        if (role.TenantId != TenantId)
+            throw new InvalidOperationException("Role does not belong to this member's tenant.");
+
+        var roleAssignment = TenantMemberRole.Create(Id, role.Id, TenantId, assignedBy);
+        _roleAssignments.Add(roleAssignment);
+        return roleAssignment;
+    }
 }

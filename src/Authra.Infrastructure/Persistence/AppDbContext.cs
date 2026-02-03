@@ -39,6 +39,13 @@ public class AppDbContext : DbContext, IUnitOfWork
     public DbSet<Organization> Organizations => Set<Organization>();
     public DbSet<OrganizationMember> OrganizationMembers => Set<OrganizationMember>();
 
+    // RBAC Layer (RLS Enforced)
+    public DbSet<Permission> Permissions => Set<Permission>();
+    public DbSet<Role> Roles => Set<Role>();
+    public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
+    public DbSet<RoleOrganization> RoleOrganizations => Set<RoleOrganization>();
+    public DbSet<TenantMemberRole> TenantMemberRoles => Set<TenantMemberRole>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
