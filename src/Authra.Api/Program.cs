@@ -6,6 +6,8 @@ using Authra.Api.Infrastructure;
 using Authra.Application.Auth;
 using Authra.Application.Auth.Validators;
 using Authra.Application.Common.Interfaces;
+using Authra.Application.Organizations;
+using Authra.Application.Roles;
 using Authra.Application.Tenants;
 using Authra.Application.Users;
 using Authra.Infrastructure.Persistence;
@@ -58,6 +60,8 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ITenantService, TenantService>();
 builder.Services.AddScoped<IInviteService, InviteService>();
+builder.Services.AddScoped<IOrganizationService, OrganizationService>();
+builder.Services.AddScoped<IRoleService, RoleService>();
 
 // Add email service (Mailpit for dev, SMTP for prod)
 if (builder.Environment.IsDevelopment())
@@ -255,6 +259,12 @@ app.MapUserEndpoints();
 
 // Map tenant endpoints
 app.MapTenantEndpoints();
+
+// Map organization endpoints
+app.MapOrganizationEndpoints();
+
+// Map role endpoints
+app.MapRoleEndpoints();
 
 // Map JWKS endpoint
 app.MapGet("/.well-known/jwks.json", async ([FromServices] ITokenService tokenService, CancellationToken ct) =>
