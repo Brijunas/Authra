@@ -23,4 +23,10 @@ public class ValidationException : DomainException
             { propertyName, [errorMessage] }
         };
     }
+
+    public ValidationException(string message)
+        : base(message)
+    {
+        Errors = new Dictionary<string, string[]>();
+    }
 }
