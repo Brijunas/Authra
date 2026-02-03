@@ -3,6 +3,7 @@
 CLAUDE-*.md
 session-name.txt
 CLAUDE.md
+/SESSION-HANDOFF.md
 
 # .NET
 bin/
@@ -15,6 +16,8 @@ obj/
 .vs/
 .vscode/
 *.csproj.user
+/src/Authra.Api/binDebug
+/src/Authra.Infrastructure/binDebug
 
 # Build results
 [Dd]ebug/
