@@ -46,6 +46,14 @@ public class AppDbContext : DbContext, IUnitOfWork
     public DbSet<RoleOrganization> RoleOrganizations => Set<RoleOrganization>();
     public DbSet<TenantMemberRole> TenantMemberRoles => Set<TenantMemberRole>();
 
+    // Session/Token Layer
+    public DbSet<SigningKey> SigningKeys => Set<SigningKey>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<TokenBlacklist> TokenBlacklist => Set<TokenBlacklist>();
+
+    // Audit Layer
+    public DbSet<OwnershipTransfer> OwnershipTransfers => Set<OwnershipTransfer>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
