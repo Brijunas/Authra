@@ -143,15 +143,16 @@ public class AuthService : IAuthService
             return await BuildLoginResponseAsync(user, membership, cancellationToken);
         }
 
-        // If user has no tenants, return login without tenant context
+        // If user has no tenants, return login with user-only token (no tenant context)
         if (memberships.Count == 0)
         {
-            // User registered but hasn't joined any tenant
+            // User registered but hasn't joined any tenant - issue user-only token
+            var userOnlyToken = await _tokenService.GenerateUserOnlyAccessTokenAsync(user.Id, cancellationToken);
             var userInfo = await GetUserInfoAsync(user.Id, cancellationToken);
             return new LoginResponse(
-                AccessToken: string.Empty,
-                RefreshToken: string.Empty,
-                AccessTokenExpiresAt: default,
+                AccessToken: userOnlyToken.AccessToken,
+                RefreshToken: string.Empty, // No refresh token without tenant
+                AccessTokenExpiresAt: userOnlyToken.AccessTokenExpiresAt,
                 RefreshTokenExpiresAt: default,
                 User: userInfo,
                 Tenant: null);

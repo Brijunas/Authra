@@ -1,14 +1,18 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
+using Authra.Api.Endpoints;
 using Authra.Api.Infrastructure;
 using Authra.Application.Auth;
 using Authra.Application.Auth.Validators;
 using Authra.Application.Common.Interfaces;
+using Authra.Application.Tenants;
+using Authra.Application.Users;
 using Authra.Infrastructure.Persistence;
 using Authra.Infrastructure.Services;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -25,6 +29,7 @@ builder.Host.UseSerilog((context, config) =>
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
     options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+    options.SerializerOptions.PropertyNameCaseInsensitive = true;
     options.SerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
 });
@@ -50,6 +55,9 @@ builder.Services.AddScoped<IDateTimeProvider, DateTimeProvider>();
 builder.Services.AddScoped<ITenantContext, TenantContext>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<ITenantService, TenantService>();
+builder.Services.AddScoped<IInviteService, InviteService>();
 
 // Add email service (Mailpit for dev, SMTP for prod)
 if (builder.Environment.IsDevelopment())
@@ -64,11 +72,14 @@ else
 // Add FluentValidation
 builder.Services.AddValidatorsFromAssemblyContaining<RegisterRequestValidator>();
 
-// Add authentication
+// Add authentication with custom token validation
 var tokenOptions = builder.Configuration.GetSection(TokenOptions.SectionName).Get<TokenOptions>() ?? new TokenOptions();
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        // Disable inbound claim type mapping to preserve original claim names (e.g., "tid" stays "tid")
+        options.MapInboundClaims = false;
+
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
@@ -77,30 +88,45 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidAudience = tokenOptions.Audience,
             ValidateLifetime = true,
             ClockSkew = TimeSpan.FromSeconds(30),
-            ValidateIssuerSigningKey = true,
-            // Signing keys will be resolved dynamically
-            IssuerSigningKeyResolver = (token, securityToken, kid, parameters) =>
+            ValidateIssuerSigningKey = false, // We validate keys manually in OnTokenValidated
+            SignatureValidator = (token, parameters) =>
             {
-                // Keys are validated in TokenService
-                return [];
+                // Skip signature validation here; we'll validate in OnTokenValidated
+                // This is a workaround for async key loading from DB
+                var handler = new Microsoft.IdentityModel.JsonWebTokens.JsonWebTokenHandler();
+                return handler.ReadJsonWebToken(token);
             }
         };
 
         options.Events = new JwtBearerEvents
         {
-            OnMessageReceived = context =>
+            OnTokenValidated = async context =>
             {
-                // Support Authorization header without Bearer prefix
-                var token = context.Request.Headers.Authorization.FirstOrDefault();
-                if (!string.IsNullOrEmpty(token) && token.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                // Validate token signature and blacklist using TokenService
+                var tokenService = context.HttpContext.RequestServices.GetRequiredService<ITokenService>();
+                var rawToken = context.Request.Headers.Authorization.FirstOrDefault()?.Replace("Bearer ", "");
+
+                if (string.IsNullOrEmpty(rawToken))
                 {
-                    context.Token = token["Bearer ".Length..].Trim();
+                    context.Fail("No token provided");
+                    return;
                 }
-                return Task.CompletedTask;
+
+                var claims = await tokenService.ValidateAccessTokenAsync(rawToken);
+                if (claims == null)
+                {
+                    context.Fail("Token validation failed");
+                    return;
+                }
+
+                // Token is valid - no additional action needed as principal is already set
             }
         };
     });
 
+// Add authorization with permission policies
+builder.Services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
+builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
 builder.Services.AddAuthorization();
 
 // Add rate limiting
@@ -223,6 +249,12 @@ app.MapHealthChecks("/health");
 
 // Map auth endpoints
 app.MapAuthEndpoints();
+
+// Map user endpoints
+app.MapUserEndpoints();
+
+// Map tenant endpoints
+app.MapTenantEndpoints();
 
 // Map JWKS endpoint
 app.MapGet("/.well-known/jwks.json", async ([FromServices] ITokenService tokenService, CancellationToken ct) =>

@@ -17,13 +17,32 @@ public sealed class DatabaseFixture : IAsyncLifetime
         .Build();
 
     private Respawner? _respawner;
-    private bool _hasTablesInitialized;
+    private bool _migrationsApplied;
+    private readonly SemaphoreSlim _migrationLock = new(1, 1);
 
     public string ConnectionString => _container.GetConnectionString();
+    public bool MigrationsApplied => _migrationsApplied;
 
     public async ValueTask InitializeAsync()
     {
         await _container.StartAsync();
+    }
+
+    /// <summary>
+    /// Marks migrations as applied. Call this after migrations have been applied.
+    /// Thread-safe to handle concurrent test initialization.
+    /// </summary>
+    public async Task MarkMigrationsAppliedAsync()
+    {
+        await _migrationLock.WaitAsync();
+        try
+        {
+            _migrationsApplied = true;
+        }
+        finally
+        {
+            _migrationLock.Release();
+        }
     }
 
     /// <summary>
@@ -32,20 +51,29 @@ public sealed class DatabaseFixture : IAsyncLifetime
     /// </summary>
     public async Task InitializeRespawnerAsync()
     {
-        if (_hasTablesInitialized)
+        if (_respawner != null)
             return;
 
-        await using var connection = new NpgsqlConnection(ConnectionString);
-        await connection.OpenAsync();
-
-        _respawner = await Respawner.CreateAsync(connection, new RespawnerOptions
+        await _migrationLock.WaitAsync();
+        try
         {
-            DbAdapter = DbAdapter.Postgres,
-            SchemasToInclude = ["public"],
-            TablesToIgnore = ["__EFMigrationsHistory"]
-        });
+            if (_respawner != null)
+                return;
 
-        _hasTablesInitialized = true;
+            await using var connection = new NpgsqlConnection(ConnectionString);
+            await connection.OpenAsync();
+
+            _respawner = await Respawner.CreateAsync(connection, new RespawnerOptions
+            {
+                DbAdapter = DbAdapter.Postgres,
+                SchemasToInclude = ["public"],
+                TablesToIgnore = ["__EFMigrationsHistory"]
+            });
+        }
+        finally
+        {
+            _migrationLock.Release();
+        }
     }
 
     /// <summary>

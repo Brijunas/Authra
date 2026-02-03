@@ -11,6 +11,7 @@ public record TokenPair(
 
 /// <summary>
 /// Claims to include in the access token.
+/// For user-only tokens (no tenant context), TenantId and TenantMemberId will be Guid.Empty.
 /// </summary>
 public record TokenClaims(
     Guid UserId,
@@ -18,13 +19,32 @@ public record TokenClaims(
     Guid TenantMemberId,
     IReadOnlyList<Guid> OrganizationIds,
     IReadOnlyList<string> Roles,
-    IReadOnlyList<string> Permissions);
+    IReadOnlyList<string> Permissions)
+{
+    /// <summary>
+    /// Returns true if this is a user-only token without tenant context.
+    /// </summary>
+    public bool IsUserOnly => TenantId == Guid.Empty;
+};
+
+/// <summary>
+/// User-only access token (no tenant context) for users without tenants.
+/// </summary>
+public record UserOnlyAccessToken(
+    string AccessToken,
+    DateTimeOffset AccessTokenExpiresAt);
 
 /// <summary>
 /// Service for JWT access token and opaque refresh token management.
 /// </summary>
 public interface ITokenService
 {
+    /// <summary>
+    /// Generates a user-only access token (no tenant context).
+    /// Used for users who have no tenant memberships yet.
+    /// </summary>
+    Task<UserOnlyAccessToken> GenerateUserOnlyAccessTokenAsync(Guid userId, CancellationToken cancellationToken = default);
+
     /// <summary>
     /// Generates a new token pair (access token + refresh token).
     /// </summary>

@@ -39,6 +39,44 @@ public class TokenService : ITokenService
         _options = options.Value;
     }
 
+    public async Task<UserOnlyAccessToken> GenerateUserOnlyAccessTokenAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var now = _dateTimeProvider.UtcNow;
+        var accessTokenExpires = now.AddMinutes(_options.AccessTokenLifetimeMinutes);
+
+        // Get or create active signing key
+        var signingKey = await GetOrCreateActiveSigningKeyAsync(cancellationToken);
+
+        // Generate user-only access token (no tenant claims)
+        // Note: ECDsa is not disposed here because ECDsaSecurityKey may hold a reference
+        // and JsonWebTokenHandler.CreateToken may use it lazily. The key will be GC'd.
+        var ecdsa = LoadEcdsaPrivateKey(signingKey);
+        var securityKey = new ECDsaSecurityKey(ecdsa) { KeyId = signingKey.KeyId };
+        var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.EcdsaSha256);
+
+        var jwtClaims = new List<Claim>
+        {
+            new(JwtRegisteredClaimNames.Sub, userId.ToString()),
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new(JwtRegisteredClaimNames.Iat, now.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64)
+        };
+
+        var tokenDescriptor = new SecurityTokenDescriptor
+        {
+            Issuer = _options.Issuer,
+            Audience = _options.Audience,
+            Subject = new ClaimsIdentity(jwtClaims),
+            NotBefore = now.UtcDateTime,
+            Expires = accessTokenExpires.UtcDateTime,
+            SigningCredentials = credentials
+        };
+
+        var handler = new JsonWebTokenHandler();
+        var accessToken = handler.CreateToken(tokenDescriptor);
+
+        return new UserOnlyAccessToken(accessToken, accessTokenExpires);
+    }
+
     public async Task<TokenPair> GenerateTokenPairAsync(TokenClaims claims, CancellationToken cancellationToken = default)
     {
         var now = _dateTimeProvider.UtcNow;
@@ -345,7 +383,9 @@ public class TokenService : ITokenService
 
     private string GenerateAccessToken(TokenClaims claims, SigningKey signingKey, DateTimeOffset now, DateTimeOffset expires)
     {
-        using var ecdsa = LoadEcdsaPrivateKey(signingKey);
+        // Note: ECDsa is not disposed here because ECDsaSecurityKey may hold a reference
+        // and JsonWebTokenHandler.CreateToken may use it lazily. The key will be GC'd.
+        var ecdsa = LoadEcdsaPrivateKey(signingKey);
         var securityKey = new ECDsaSecurityKey(ecdsa) { KeyId = signingKey.KeyId };
         var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.EcdsaSha256);
 
@@ -475,8 +515,18 @@ public class TokenService : ITokenService
     private static TokenClaims ExtractClaims(IDictionary<string, object> claims)
     {
         var userId = Guid.Parse(claims[JwtRegisteredClaimNames.Sub].ToString()!);
-        var tenantId = Guid.Parse(claims[TenantIdClaim].ToString()!);
-        var memberId = Guid.Parse(claims[MemberIdClaim].ToString()!);
+
+        // Tenant and member IDs are optional (user-only tokens don't have them)
+        var tenantId = Guid.Empty;
+        var memberId = Guid.Empty;
+        if (claims.TryGetValue(TenantIdClaim, out var tidValue))
+        {
+            tenantId = Guid.Parse(tidValue.ToString()!);
+        }
+        if (claims.TryGetValue(MemberIdClaim, out var midValue))
+        {
+            memberId = Guid.Parse(midValue.ToString()!);
+        }
 
         var orgIds = new List<Guid>();
         if (claims.TryGetValue(OrganizationIdsClaim, out var orgValue))

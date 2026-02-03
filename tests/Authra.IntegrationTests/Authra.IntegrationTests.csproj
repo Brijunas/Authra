@@ -26,6 +26,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\Authra.Domain\Authra.Domain.csproj" />
     <ProjectReference Include="..\..\src\Authra.Application\Authra.Application.csproj" />
     <ProjectReference Include="..\..\src\Authra.Infrastructure\Authra.Infrastructure.csproj" />
