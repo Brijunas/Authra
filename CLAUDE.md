@@ -666,6 +666,7 @@ src/
 │   └── Exceptions/
 │
 ├── Authra.Application/
+│   ├── DependencyInjection.cs
 │   ├── Auth/
 │   │   ├── IAuthService.cs
 │   │   ├── DTOs/
@@ -680,6 +681,7 @@ src/
 │           └── IUnitOfWork.cs
 │
 ├── Authra.Infrastructure/
+│   ├── DependencyInjection.cs
 │   ├── Persistence/
 │   │   ├── AppDbContext.cs
 │   │   └── Configurations/
@@ -689,9 +691,12 @@ src/
 │       └── PasswordHasher.cs
 │
 └── Authra.Api/
+    ├── DependencyInjection.cs
     ├── Endpoints/
     └── Program.cs
 ```
+
+**Note**: `AuthEndpoints.cs` uses namespace `Authra.Api.Infrastructure` (not `Authra.Api.Endpoints` like other endpoint files).
 
 ### Layer Responsibilities
 
@@ -713,6 +718,21 @@ src/
 
 - Services may grow large over time (mitigated: can split into smaller services per feature)
 - No CQRS separation (acceptable for MVP scale)
+
+## DI Registration Pattern
+
+Each layer has a `DependencyInjection.cs` with extension on `IHostApplicationBuilder` (not `IServiceCollection`):
+
+- **Namespace**: All use `namespace Microsoft.Extensions.DependencyInjection` (no extra usings needed in Program.cs)
+- **Signature**: `public static void AddXxx(this IHostApplicationBuilder builder)` returning `void`
+- **Options**: Use `.AddOptions<T>().BindConfiguration().ValidateDataAnnotations().ValidateOnStart()` (not `Configure<T>()`)
+- **Program.cs**: `builder.AddApplication()`, `builder.AddInfrastructure()`, `builder.AddApi()`
+
+| Layer | Registers |
+|-------|-----------|
+| Application | FluentValidation validators |
+| Infrastructure | DbContext, options binding, all service implementations, email |
+| Api | JSON serialization, JWT auth, authorization, rate limiting, CORS, health checks, OpenAPI, error handling |
 
 ## Architectural Decision: Email Service
 
