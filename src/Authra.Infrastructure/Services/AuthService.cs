@@ -36,7 +36,7 @@ public class AuthService : IAuthService
         _dateTimeProvider = dateTimeProvider;
     }
 
-    public async Task<RegisterResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
+    public async Task<UserAuth> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
     {
         var normalizedEmail = request.Email.ToLowerInvariant().Trim();
 
@@ -84,7 +84,7 @@ public class AuthService : IAuthService
 
         await _context.SaveChangesAsync(cancellationToken);
 
-        return new RegisterResponse(
+        return new UserAuth(
             PrefixId("usr", user.Id),
             normalizedEmail,
             normalizedUsername);
@@ -148,7 +148,7 @@ public class AuthService : IAuthService
         {
             // User registered but hasn't joined any tenant - issue user-only token
             var userOnlyToken = await _tokenService.GenerateUserOnlyAccessTokenAsync(user.Id, cancellationToken);
-            var userInfo = await GetUserInfoAsync(user.Id, cancellationToken);
+            var userInfo = await GetUserAuthAsync(user.Id, cancellationToken);
             return new LoginResponse(
                 AccessToken: userOnlyToken.AccessToken,
                 RefreshToken: string.Empty, // No refresh token without tenant
@@ -361,7 +361,7 @@ public class AuthService : IAuthService
         var tokenPair = await _tokenService.GenerateTokenPairAsync(tokenClaims, cancellationToken);
 
         // Build response
-        var userInfo = await GetUserInfoAsync(user.Id, cancellationToken);
+        var userInfo = await GetUserAuthAsync(user.Id, cancellationToken);
         var tenantInfo = new TenantInfo(
             PrefixId("tnt", membership.TenantId),
             membership.Tenant.Name,
@@ -379,7 +379,7 @@ public class AuthService : IAuthService
             tenantInfo);
     }
 
-    private async Task<UserInfo> GetUserInfoAsync(Guid userId, CancellationToken cancellationToken)
+    private async Task<UserAuth> GetUserAuthAsync(Guid userId, CancellationToken cancellationToken)
     {
         var identifiers = await _context.UserIdentifiers
             .Where(ui => ui.UserId == userId)
@@ -388,7 +388,7 @@ public class AuthService : IAuthService
         var email = identifiers.FirstOrDefault(i => i.Type == "email")?.ValueNormalized ?? "";
         var username = identifiers.FirstOrDefault(i => i.Type == "username")?.ValueNormalized;
 
-        return new UserInfo(PrefixId("usr", userId), email, username);
+        return new UserAuth(PrefixId("usr", userId), email, username);
     }
 
     private static string PrefixId(string prefix, Guid id) => $"{prefix}_{id:N}";

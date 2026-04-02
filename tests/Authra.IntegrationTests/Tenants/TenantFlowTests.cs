@@ -35,7 +35,7 @@ public class TenantFlowTests : IAsyncLifetime
         var registerRequest = new RegisterRequest(email, password);
         var registerResponse = await _fixture.Client.PostAsJsonAsync("/v1/auth/register", registerRequest);
         registerResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var registerResult = await registerResponse.Content.ReadFromJsonAsync<RegisterResponse>();
+        var registerResult = await registerResponse.Content.ReadFromJsonAsync<UserAuth>();
         registerResult!.Email.Should().Be(email);
 
         // Step 2: Login (no tenant yet - should get user-only token)

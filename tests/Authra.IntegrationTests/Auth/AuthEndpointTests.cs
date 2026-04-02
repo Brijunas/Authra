@@ -41,11 +41,11 @@ public class AuthEndpointTests : IAsyncLifetime
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Created);
 
-        var result = await response.Content.ReadFromJsonAsync<RegisterResponse>();
+        var result = await response.Content.ReadFromJsonAsync<UserAuth>();
         result.Should().NotBeNull();
         result!.Email.Should().Be("test@example.com");
         result.Username.Should().Be("testuser");
-        result.UserId.Should().StartWith("usr_");
+        result.Id.Should().StartWith("usr_");
     }
 
     [Fact]

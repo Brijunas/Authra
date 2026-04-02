@@ -18,7 +18,7 @@ public static class AuthEndpoints
             .WithName("Register")
             .RequireRateLimiting("register")
             .AllowAnonymous()
-            .Produces<RegisterResponse>(StatusCodes.Status201Created)
+            .Produces<UserAuth>(StatusCodes.Status201Created)
             .ProducesValidationProblem()
             .ProducesProblem(StatusCodes.Status409Conflict);
 
@@ -87,7 +87,7 @@ public static class AuthEndpoints
         }
 
         var response = await authService.RegisterAsync(request, ct);
-        return Results.Created($"/v1/users/{response.UserId}", response);
+        return Results.Created($"/v1/users/{response.Id}", response);
     }
 
     private static async Task<IResult> LoginAsync(

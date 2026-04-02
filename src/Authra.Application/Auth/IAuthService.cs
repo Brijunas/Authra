@@ -11,7 +11,7 @@ public interface IAuthService
     /// <summary>
     /// Registers a new user with email and password.
     /// </summary>
-    Task<RegisterResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default);
+    Task<UserAuth> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Authenticates a user. Returns LoginResponse for single tenant, or TenantSelectionRequired for multi-tenant.
