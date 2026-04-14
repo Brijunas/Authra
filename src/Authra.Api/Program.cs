@@ -1,8 +1,10 @@
 using Authra.Api.Endpoints;
 using Authra.Api.Infrastructure;
 using Authra.Application.Common.Interfaces;
+using Authra.Infrastructure.Persistence;
 using Authra.Infrastructure.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
 using Serilog;
 
@@ -18,6 +20,14 @@ builder.AddInfrastructure();
 builder.AddApi();
 
 var app = builder.Build();
+
+// Apply pending migrations in development
+if (app.Environment.IsDevelopment())
+{
+    using var scope = app.Services.CreateScope();
+    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    dbContext.Database.Migrate();
+}
 
 // Configure the HTTP request pipeline
 app.UseExceptionHandler();
