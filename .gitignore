@@ -30,6 +30,10 @@ bld/
 [Ll]og/
 [Ll]ogs/
 
+# Re-include Claude Code skill folders whose names collide with build-output patterns
+!.claude/skills/debug/
+!.claude/skills/debug/**
+
 # NuGet
 *.nupkg
 *.snupkg
